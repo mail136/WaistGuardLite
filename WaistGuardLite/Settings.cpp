@@ -165,6 +165,7 @@ void Settings::CreateControls(HWND hwnd)
         hwnd, (HMENU)ID_TIPS_EDIT, GetModuleHandle(NULL), NULL);
     SendMessage(s_tipsEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
 
+    /*
     // 二维码部分
     const int QR_X = WINDOW_WIDTH - RIGHT_MARGIN - QR_SIZE;
     const int QR_Y = FIRST_CONTROL_Y;
@@ -190,13 +191,14 @@ void Settings::CreateControls(HWND hwnd)
 
     // 设置二维码图片
     SendMessage(hQRCode, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBitmap);
-
+    
     // 在二维码下方添加文本说明
     HWND hQRText = CreateWindow(L"STATIC", L"微信扫码联系作者",
         WS_CHILD | WS_VISIBLE | SS_CENTER,
         QR_X, QR_Y + QR_SIZE + 5, QR_SIZE, 20,
         hwnd, NULL, GetModuleHandle(NULL), NULL);
     SendMessage(hQRText, WM_SETFONT, (WPARAM)hFont, TRUE);  // 使用普通字体
+    */
 
     // 按钮使用稍大的字体
     HFONT hBtnFont = CreateFont(18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,

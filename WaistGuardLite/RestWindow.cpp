@@ -102,79 +102,79 @@ LRESULT CALLBACK RestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
 {
     switch (uMsg)
     {
-    case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hwnd, &ps);
-
-        // 设置文本颜色和背景模式
-        SetTextColor(hdc, RGB(236, 65, 65));  // 网易云红色
-        SetBkMode(hdc, TRANSPARENT);
-
-        // 创建标题字体
-        HFONT hTitleFont = CreateFont(32, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
-            DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
-            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
-
-        // 创建倒计时字体
-        HFONT hCountdownFont = CreateFont(96, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-            DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
-            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
-
-        // 创建提示文本字体
-        HFONT hTipsFont = CreateFont(28, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-            DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
-            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
-
-        // 获取窗口客户区大小
-        RECT rect;
-        GetClientRect(hwnd, &rect);
-
-        // 绘制标题
-        HFONT hOldFont = (HFONT)SelectObject(hdc, hTitleFont);
-        RECT titleRect = rect;
-        titleRect.top = rect.bottom / 3;
-        DrawText(hdc, L"护腰神器提醒您：休息结束时间", -1, &titleRect, DT_CENTER | DT_SINGLELINE);
-
-        // 绘制倒计时
-        SelectObject(hdc, hCountdownFont);
-        RECT countdownRect = rect;
-        countdownRect.top = titleRect.top + 50;
-        wchar_t countdownText[32];
-        swprintf_s(countdownText, L"%02d:%02d", s_remainingSeconds / 60, s_remainingSeconds % 60);
-        DrawText(hdc, countdownText, -1, &countdownRect, DT_CENTER | DT_SINGLELINE);
-
-        // 绘制提示文本
-        SetTextColor(hdc, RGB(51, 51, 51));  // 深灰色
-        SelectObject(hdc, hTipsFont);
-        RECT tipsRect = rect;
-        tipsRect.top = countdownRect.top + 100;
-        tipsRect.left = rect.right / 4;
-        tipsRect.right = rect.right * 3 / 4;
-        DrawText(hdc, s_tips[s_currentTipIndex], -1, &tipsRect, DT_CENTER | DT_WORDBREAK);
-
-        // 清理
-        SelectObject(hdc, hOldFont);
-        DeleteObject(hTitleFont);
-        DeleteObject(hCountdownFont);
-        DeleteObject(hTipsFont);
-
-        EndPaint(hwnd, &ps);
-        return 0;
-    }
-
-    case WM_KEYDOWN:
-    case WM_KEYUP:
-    case WM_SYSKEYDOWN:
-    case WM_SYSKEYUP:
-        return 0;  // 忽略所有键盘输入
-
-    case WM_COMMAND:
-        if (LOWORD(wParam) == ID_SKIP_REST)
+        case WM_PAINT:
         {
-            Close();  // 直接调用 Close 函数处理所有清理工作
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+
+            // 设置文本颜色和背景模式
+            SetTextColor(hdc, RGB(236, 65, 65));  // 网易云红色
+            SetBkMode(hdc, TRANSPARENT);
+
+            // 创建标题字体
+            HFONT hTitleFont = CreateFont(32, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+                DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
+                CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
+
+            // 创建倒计时字体
+            HFONT hCountdownFont = CreateFont(96, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
+                CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
+
+            // 创建提示文本字体
+            HFONT hTipsFont = CreateFont(28, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
+                CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
+
+            // 获取窗口客户区大小
+            RECT rect;
+            GetClientRect(hwnd, &rect);
+
+            // 绘制标题
+            HFONT hOldFont = (HFONT)SelectObject(hdc, hTitleFont);
+            RECT titleRect = rect;
+            titleRect.top = rect.bottom / 3;
+            DrawText(hdc, L"护腰神器提醒您：休息结束时间", -1, &titleRect, DT_CENTER | DT_SINGLELINE);
+
+            // 绘制倒计时
+            SelectObject(hdc, hCountdownFont);
+            RECT countdownRect = rect;
+            countdownRect.top = titleRect.top + 50;
+            wchar_t countdownText[32];
+            swprintf_s(countdownText, L"%02d:%02d", s_remainingSeconds / 60, s_remainingSeconds % 60);
+            DrawText(hdc, countdownText, -1, &countdownRect, DT_CENTER | DT_SINGLELINE);
+
+            // 绘制提示文本
+            SetTextColor(hdc, RGB(51, 51, 51));  // 深灰色
+            SelectObject(hdc, hTipsFont);
+            RECT tipsRect = rect;
+            tipsRect.top = countdownRect.top + 100;
+            tipsRect.left = rect.right / 4;
+            tipsRect.right = rect.right * 3 / 4;
+            DrawText(hdc, s_tips[s_currentTipIndex], -1, &tipsRect, DT_CENTER | DT_WORDBREAK);
+
+            // 清理
+            SelectObject(hdc, hOldFont);
+            DeleteObject(hTitleFont);
+            DeleteObject(hCountdownFont);
+            DeleteObject(hTipsFont);
+
+            EndPaint(hwnd, &ps);
+            return 0;
         }
-        return 0;
+
+        case WM_KEYDOWN:
+        case WM_KEYUP:
+        case WM_SYSKEYDOWN:
+        case WM_SYSKEYUP:
+            return 0;  // 忽略所有键盘输入
+
+        case WM_COMMAND:
+            if (LOWORD(wParam) == ID_SKIP_REST)
+            {
+                Close();  // 直接调用 Close 函数处理所有清理工作
+            }
+            return 0;
     }
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);

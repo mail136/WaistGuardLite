@@ -163,7 +163,7 @@ void MainWindow::UpdateWorkTime()
         // 更新窗口标题
         wchar_t title[256];
         StringCchPrintf(title, ARRAYSIZE(title), 
-            L"护腰神器 - By：程序员七平");
+            L"护腰神器");
         SetWindowText(g_appState.hwnd, title);
         
         // 更新状态栏

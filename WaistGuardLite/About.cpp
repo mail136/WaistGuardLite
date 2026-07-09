@@ -113,6 +113,7 @@ void About::CreateControls(HWND hwnd)
 
     currentY += 35;  // 标语后间距大一点
 
+    /*
     // 作者信息
     HWND hAuthor = CreateWindow(L"STATIC", L"Powered by 程序员七平",
         WS_CHILD | WS_VISIBLE,
@@ -150,8 +151,9 @@ void About::CreateControls(HWND hwnd)
     {
         SendMessage(hQRCode, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBitmap);
     }
-
+    
     currentY += QR_SIZE + 30;  // 二维码下方留出足够空间
+    */
 }
 
 LRESULT CALLBACK About::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

@@ -3,7 +3,7 @@
   <assemblyIdentity
     version="1.0.0.0"
     processorArchitecture="*"
-    name="程序员七平.护腰神器"
+    name="护腰神器"
     type="win32"
   />
   <description>护腰神器 - 保护您的腰部健康</description>
