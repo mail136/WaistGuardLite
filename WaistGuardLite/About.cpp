@@ -21,7 +21,7 @@ bool About::Create(HWND parentHwnd)
         L"关于",             // 窗口标题
         WS_POPUP | WS_CAPTION | WS_SYSMENU,  // 窗口样式
         0, 0,                // 位置
-        400, 400,           // 高度从450改为400，因为去掉了关闭按钮
+        400, 225,           // 高度从450改为400，因为去掉了关闭按钮
         parentHwnd,          // 父窗口
         NULL,               // 菜单
         GetModuleHandle(NULL),  // 实例句柄
