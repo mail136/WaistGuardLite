@@ -10,6 +10,8 @@ class PreRestWindow {
 public:
     static bool Create(bool isManual);
     static bool IsDelayed() { return s_isDelayed; }
+    static bool IsActive() { return s_hwnd != NULL; }  // 检查预休息窗口是否活跃
+    static void Close();
 
 private:
     static HWND s_hwnd;
@@ -23,5 +25,4 @@ private:
     static void CreateControls(HWND hwnd);
     static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     static VOID CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
-    static void Close();
 };

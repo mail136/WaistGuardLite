@@ -18,6 +18,7 @@ public:
     // 公共静态方法
     static bool Create(int duration);
     static void Close();
+    static bool IsActive() { return s_hwnd != NULL; }  // 检查休息窗口是否活跃
     static void SetTimerCallbacks(TimerCallback workProc, TimerCallback displayProc);
     static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 

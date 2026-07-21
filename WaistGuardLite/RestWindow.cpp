@@ -2,6 +2,8 @@
 #include "RestWindow.h"
 #include "MainWindow.h"
 #include <strsafe.h>
+#include <wtsapi32.h>
+#pragma comment(lib, "wtsapi32.lib")
 
 // 定义静态成员变量
 HWND RestWindow::s_hwnd = NULL;
@@ -102,6 +104,24 @@ LRESULT CALLBACK RestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
 {
     switch (uMsg)
     {
+        case WM_CREATE:
+            // 全屏休息窗口自身也注册 WTS 会话通知，确保 RDP 断连时能立即关闭
+            // 防止全屏置顶窗口在重连时干扰 Explorer 重建任务栏图标缓存
+            WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
+            return 0;
+
+        case WM_WTSSESSION_CHANGE:
+            if (wParam == WTS_REMOTE_DISCONNECT || wParam == WTS_SESSION_LOCK)
+            {
+                // RDP 断连或会话锁定：立即关闭全屏窗口，防止干扰重连时的桌面初始化
+                Close();
+            }
+            return 0;
+
+        case WM_DESTROY:
+            WTSUnRegisterSessionNotification(hwnd);
+            return 0;
+
         case WM_PAINT:
         {
             PAINTSTRUCT ps;

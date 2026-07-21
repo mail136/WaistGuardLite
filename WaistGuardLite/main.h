@@ -38,6 +38,8 @@ struct AppState {
     int delayDuration;      // 延迟休息时长（分钟）
     bool autoStart;         // 开机自启动
     NOTIFYICONDATA nid;     // 托盘图标数据
+    UINT taskbarRestartMsg; // TaskbarCreated 注册消息 ID
+    bool isSessionDisconnected; // RDP 会话是否已断连
 };
 
 // 全局变量

@@ -4,7 +4,9 @@
 #include "MainWindow.h"
 #include <strsafe.h>
 #include <mmsystem.h>
+#include <wtsapi32.h>
 #pragma comment(lib, "winmm.lib")
+#pragma comment(lib, "wtsapi32.lib")
 
 static_assert(offsetof(AppState, startTick) >= 0, "AppState must have startTick member");
 
@@ -201,6 +203,10 @@ VOID CALLBACK MainWindow::DisplayTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEven
 
 VOID CALLBACK MainWindow::WorkTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
 {
+    // RDP 断连时不弹出全屏休息窗口，避免重连时干扰任务栏图标缓存
+    if (g_appState.isSessionDisconnected)
+        return;
+
     if (!g_appState.isResting && !g_appState.isPreResting)
     {
         ShowRestWindow(false);
@@ -334,10 +340,20 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
     RECT rect;
     POINT pt;
 
+    // 处理 TaskbarCreated 消息（Explorer 重启后重建托盘图标）
+    if (uMsg == g_appState.taskbarRestartMsg && g_appState.taskbarRestartMsg != 0)
+    {
+        Shell_NotifyIcon(NIM_ADD, &g_appState.nid);
+        return 0;
+    }
+
     switch (uMsg)
     {
     case WM_CREATE:
     {
+        // 注册 TaskbarCreated 消息（Explorer 重启后重建托盘图标）
+        g_appState.taskbarRestartMsg = RegisterWindowMessage(L"TaskbarCreated");
+
         // 创建托盘图标
         ZeroMemory(&g_appState.nid, sizeof(NOTIFYICONDATA));
         g_appState.nid.cbSize = sizeof(NOTIFYICONDATA);
@@ -378,6 +394,10 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
             const wchar_t* tipText = L"双击托盘图标显示主窗口 | 右键托盘图标可设置、立即休息等";
             SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM)tipText);
         }
+
+        // 注册 WTS 会话通知（监听 RDP 断连/重连）
+        WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_ALL_SESSIONS);
+
         return 0;
     }
 
@@ -473,6 +493,8 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
     }
 
     case WM_DESTROY:
+        // 取消注册 WTS 会话通知
+        WTSUnRegisterSessionNotification(hwnd);
         Shell_NotifyIcon(NIM_DELETE, &g_appState.nid);
         PostQuitMessage(0);
         return 0;
@@ -506,6 +528,42 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
                 return TRUE;
         }
         break;
+
+    case WM_WTSSESSION_CHANGE:
+    {
+        switch (wParam)
+        {
+        case WTS_SESSION_LOCK:
+        case WTS_REMOTE_DISCONNECT:
+            // 会话锁定或 RDP 断连：立即关闭全屏休息窗口和预休息窗口
+            // 防止全屏置顶窗口在重连时干扰 Explorer 任务栏图标缓存重建
+            g_appState.isSessionDisconnected = true;
+            if (RestWindow::IsActive())
+            {
+                RestWindow::Close();
+            }
+            if (PreRestWindow::IsActive())
+            {
+                PreRestWindow::Close();
+            }
+            // 重置状态，等重连后重新开始计时
+            g_appState.isResting = false;
+            g_appState.isPreResting = false;
+            break;
+
+        case WTS_SESSION_UNLOCK:
+        case WTS_REMOTE_CONNECT:
+            // 会话解锁或 RDP 重连：重建托盘图标并恢复计时
+            g_appState.isSessionDisconnected = false;
+            // 重建托盘图标（防止断连期间 Explorer 重启）
+            Shell_NotifyIcon(NIM_DELETE, &g_appState.nid);
+            Shell_NotifyIcon(NIM_ADD, &g_appState.nid);
+            // 重新开始计时（从0开始，避免断连期间积累的时间）
+            TimerManager::RestartTimer();
+            break;
+        }
+        return 0;
+    }
 
     case WM_DISPLAYCHANGE:
         // 显示设置改变（分辨率、颜色深度等）
