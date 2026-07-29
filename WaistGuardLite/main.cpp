@@ -6,7 +6,7 @@
 #include "RestWindow.h"
 #include "MainWindow.h"
 #include <strsafe.h>
-
+ 
 // 全局变量定义
 AppState g_appState = { 0 };
 
