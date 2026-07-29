@@ -24,6 +24,7 @@ const wchar_t WINDOW_TITLE[] = L"护腰神器 v1.0";
 #define ID_TRAY_SETTINGS  1004
 #define ID_TRAY_ABOUT     1005
 #define ID_TRAY_EXIT      1006
+#define ID_TRAY_PAUSE     1007
 
 // 全局状态
 struct AppState {
@@ -40,6 +41,9 @@ struct AppState {
     NOTIFYICONDATA nid;     // 托盘图标数据
     UINT taskbarRestartMsg; // TaskbarCreated 注册消息 ID
     bool isSessionDisconnected; // RDP 会话是否已断连
+    bool isTimerPaused;         // 计时是否已暂停
+    bool isPausedBySession;     // 是否由会话断连触发的暂停
+    ULONGLONG pausedElapsed;    // 暂停时累计的工作时间（毫秒）
 };
 
 // 全局变量

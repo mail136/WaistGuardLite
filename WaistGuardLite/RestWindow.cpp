@@ -192,7 +192,9 @@ LRESULT CALLBACK RestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
         case WM_COMMAND:
             if (LOWORD(wParam) == ID_SKIP_REST)
             {
-                Close();  // 直接调用 Close 函数处理所有清理工作
+                Close();
+                // 手动跳过休息，重新开始计时
+                TimerManager::RestartTimer();
             }
             return 0;
     }
@@ -205,7 +207,9 @@ VOID CALLBACK RestWindow::TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWOR
     s_remainingSeconds--;
     if (s_remainingSeconds <= 0)
     {
-        Close();  // 只在 Close 中处理重置逻辑
+        Close();  // 只关闭窗口和重置状态
+        // 休息结束，重新开始工作计时
+        TimerManager::RestartTimer();
         return;
     }
 
@@ -231,12 +235,9 @@ void RestWindow::Close()
         DestroyWindow(s_hwnd);
         s_hwnd = NULL;
 
-        // 重置状态
+        // 重置状态（不重启工作定时器，由调用方决定）
         g_appState.isResting = false;
         g_appState.isPreResting = false;
-
-        // 使用 TimerManager 重置计时器
-        TimerManager::RestartTimer();
 
         // 更新托盘图标状态
         StringCchCopy(g_appState.nid.szTip, ARRAYSIZE(g_appState.nid.szTip), WINDOW_TITLE);

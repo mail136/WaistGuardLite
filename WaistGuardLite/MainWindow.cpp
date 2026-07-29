@@ -120,7 +120,18 @@ void MainWindow::CreateTrayIcon()
 void MainWindow::UpdateTrayIcon()
 {
     // 根据状态更新托盘图标提示文本
-    if (g_appState.isResting)
+    if (g_appState.isTimerPaused)
+    {
+        // 暂停时显示暂停信息和已工作累计时间
+        ULONGLONG elapsedTime = g_appState.pausedElapsed / 1000;
+        int minutes = (int)(elapsedTime / 60);
+        int seconds = (int)(elapsedTime % 60);
+        wchar_t tipText[128];
+        StringCchPrintf(tipText, ARRAYSIZE(tipText),
+            L"计时已暂停 | 已工作：%02d:%02d", minutes, seconds);
+        StringCchCopy(g_appState.nid.szTip, ARRAYSIZE(g_appState.nid.szTip), tipText);
+    }
+    else if (g_appState.isResting)
     {
         StringCchCopy(g_appState.nid.szTip, ARRAYSIZE(g_appState.nid.szTip), L"正在休息...");
     }
@@ -147,6 +158,34 @@ void MainWindow::UpdateTrayIcon()
 void MainWindow::UpdateWorkTime()
 {
     if (!g_appState.hwnd || g_appState.isResting) return;
+
+    // 暂停状态下不更新计时，但保持UI显示
+    if (g_appState.isTimerPaused)
+    {
+        static ULONGLONG lastUpdateTime = 0;
+        ULONGLONG currentTime = GetTickCount64();
+        if (currentTime - lastUpdateTime >= 100)
+        {
+            // 显示暂停时的累计时间
+            ULONGLONG elapsedTime = g_appState.pausedElapsed / 1000;
+            int elapsedMinutes = (int)(elapsedTime / 60);
+            int remainingMinutes = g_appState.workDuration - elapsedMinutes;
+            int seconds = (int)(elapsedTime % 60);
+            if (remainingMinutes < 0) remainingMinutes = 0;
+
+            wchar_t status[256];
+            StringCchPrintf(status, ARRAYSIZE(status),
+                L" 计时已暂停  工作时长：%d分钟  休息时长：%d分钟  剩余：%d分钟",
+                g_appState.workDuration, g_appState.breakDuration, remainingMinutes);
+
+            SetWindowText(g_appState.hwnd, L"护腰神器 - 已暂停");
+            SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM)status);
+            UpdateTrayIcon();
+            InvalidateRect(g_appState.hwnd, NULL, TRUE);
+            lastUpdateTime = currentTime;
+        }
+        return;
+    }
 
     static ULONGLONG lastUpdateTime = 0;
     ULONGLONG currentTime = GetTickCount64();
@@ -205,6 +244,10 @@ VOID CALLBACK MainWindow::WorkTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, 
 {
     // RDP 断连时不弹出全屏休息窗口，避免重连时干扰任务栏图标缓存
     if (g_appState.isSessionDisconnected)
+        return;
+
+    // 暂停状态不弹出
+    if (g_appState.isTimerPaused)
         return;
 
     if (!g_appState.isResting && !g_appState.isPreResting)
@@ -304,7 +347,11 @@ void MainWindow::ShowTrayMenu(HWND hwnd, POINT pt)
     
     // 添加工作时长信息到菜单
     wchar_t timeInfo[64];
-    swprintf_s(timeInfo, L"已工作：%02d:%02d", minutes, seconds);
+    if (g_appState.isTimerPaused) {
+        swprintf_s(timeInfo, L"计时已暂停");
+    } else {
+        swprintf_s(timeInfo, L"已工作：%02d:%02d", minutes, seconds);
+    }
     InsertMenu(hMenu, 0, MF_BYPOSITION | MF_STRING | MF_GRAYED, 0, timeInfo);
     
     // 添加其他菜单项
@@ -313,11 +360,13 @@ void MainWindow::ShowTrayMenu(HWND hwnd, POINT pt)
     InsertMenu(hMenu, 3, MF_BYPOSITION | MF_STRING | (g_appState.isResting ? MF_GRAYED : 0), 
         ID_TRAY_REST, L"立即休息");
     InsertMenu(hMenu, 4, MF_BYPOSITION | MF_STRING, ID_TRAY_RESTART, L"重新计时");
-    InsertMenu(hMenu, 5, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
-    InsertMenu(hMenu, 6, MF_BYPOSITION | MF_STRING, ID_TRAY_SETTINGS, L"设置");
-    InsertMenu(hMenu, 7, MF_BYPOSITION | MF_STRING, ID_TRAY_ABOUT, L"关于");
-    InsertMenu(hMenu, 8, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
-    InsertMenu(hMenu, 9, MF_BYPOSITION | MF_STRING, ID_TRAY_EXIT, L"退出");
+    InsertMenu(hMenu, 5, MF_BYPOSITION | MF_STRING | (g_appState.isResting ? MF_GRAYED : 0),
+        ID_TRAY_PAUSE, g_appState.isTimerPaused ? L"恢复计时" : L"暂停计时");
+    InsertMenu(hMenu, 6, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
+    InsertMenu(hMenu, 7, MF_BYPOSITION | MF_STRING, ID_TRAY_SETTINGS, L"设置");
+    InsertMenu(hMenu, 8, MF_BYPOSITION | MF_STRING, ID_TRAY_ABOUT, L"关于");
+    InsertMenu(hMenu, 9, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
+    InsertMenu(hMenu, 10, MF_BYPOSITION | MF_STRING, ID_TRAY_EXIT, L"退出");
 
     // 设置默认菜单项
     SetMenuDefaultItem(hMenu, ID_TRAY_SHOW, FALSE);
@@ -535,9 +584,9 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
         {
         case WTS_SESSION_LOCK:
         case WTS_REMOTE_DISCONNECT:
-            // 会话锁定或 RDP 断连：立即关闭全屏休息窗口和预休息窗口
-            // 防止全屏置顶窗口在重连时干扰 Explorer 任务栏图标缓存重建
+            // 会话锁定或 RDP 断连：记录状态为断连
             g_appState.isSessionDisconnected = true;
+            // 关闭全屏休息/预休息窗口，防止重连时干扰任务栏图标缓存
             if (RestWindow::IsActive())
             {
                 RestWindow::Close();
@@ -546,20 +595,33 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
             {
                 PreRestWindow::Close();
             }
-            // 重置状态，等重连后重新开始计时
             g_appState.isResting = false;
             g_appState.isPreResting = false;
+            // 如果当前在计时中（未暂停、未休息），暂停计时
+            if (!g_appState.isTimerPaused && !g_appState.isResting && !g_appState.isPreResting)
+            {
+                PauseTimer();
+                g_appState.isPausedBySession = true;
+            }
             break;
 
         case WTS_SESSION_UNLOCK:
         case WTS_REMOTE_CONNECT:
-            // 会话解锁或 RDP 重连：重建托盘图标并恢复计时
+            // 会话解锁或 RDP 重连：重建托盘图标
             g_appState.isSessionDisconnected = false;
-            // 重建托盘图标（防止断连期间 Explorer 重启）
             Shell_NotifyIcon(NIM_DELETE, &g_appState.nid);
             Shell_NotifyIcon(NIM_ADD, &g_appState.nid);
-            // 重新开始计时（从0开始，避免断连期间积累的时间）
-            TimerManager::RestartTimer();
+            // 如果是会话断连导致的暂停，自动恢复计时
+            if (g_appState.isTimerPaused && g_appState.isPausedBySession)
+            {
+                ResumeTimer();
+                g_appState.isPausedBySession = false;
+            }
+            // 如果之前没有暂停（比如正在休息中），重新开始计时
+            else if (!g_appState.isTimerPaused)
+            {
+                TimerManager::RestartTimer();
+            }
             break;
         }
         return 0;
@@ -604,6 +666,16 @@ void MainWindow::HandleTrayCommand(HWND hwnd, WPARAM wParam)
         RestartTimer();
         break;
 
+    case ID_TRAY_PAUSE:
+        if (!g_appState.isResting && !g_appState.isPreResting)
+        {
+            if (g_appState.isTimerPaused)
+                ResumeTimer();
+            else
+                PauseTimer();
+        }
+        break;
+
     case ID_TRAY_SETTINGS:
         Settings::Create(hwnd);
         break;
@@ -620,7 +692,42 @@ void MainWindow::HandleTrayCommand(HWND hwnd, WPARAM wParam)
 
 void MainWindow::RestartTimer()
 {
+    g_appState.isTimerPaused = false;
+    g_appState.isPausedBySession = false;
     TimerManager::RestartTimer();
+}
+
+void MainWindow::PauseTimer()
+{
+    if (g_appState.isTimerPaused)
+        return;
+
+    // 保存当前已累计的工作时间
+    g_appState.pausedElapsed = GetTickCount64() - g_appState.startTick;
+    g_appState.isTimerPaused = true;
+
+    // 停止定时器
+    TimerManager::StopTimer();
+
+    // 更新托盘图标
+    UpdateTrayIcon();
+}
+
+void MainWindow::ResumeTimer()
+{
+    if (!g_appState.isTimerPaused)
+        return;
+
+    // 从保存的累计时间恢复，重新计算 startTick
+    g_appState.startTick = GetTickCount64() - g_appState.pausedElapsed;
+    g_appState.isTimerPaused = false;
+    g_appState.isPausedBySession = false;
+
+    // 重新启动定时器
+    TimerManager::StartTimer();
+
+    // 更新托盘图标
+    UpdateTrayIcon();
 }
 
 void MainWindow::ShowAboutInfo()

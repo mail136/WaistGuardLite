@@ -29,6 +29,8 @@ public:
     static VOID CALLBACK WorkTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
     static VOID CALLBACK DisplayTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
     static void RestartTimer();
+    static void PauseTimer();
+    static void ResumeTimer();
     static void LogError(const wchar_t* message);
     static bool CheckSystemState();
     static VOID CALLBACK DelayedRestTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
