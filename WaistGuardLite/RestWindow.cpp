@@ -107,7 +107,7 @@ LRESULT CALLBACK RestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
         case WM_CREATE:
             // 全屏休息窗口自身也注册 WTS 会话通知，确保 RDP 断连时能立即关闭
             // 防止全屏置顶窗口在重连时干扰 Explorer 重建任务栏图标缓存
-            WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
+            WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_ALL_SESSIONS);
             return 0;
 
         case WM_WTSSESSION_CHANGE:
@@ -225,6 +225,11 @@ void RestWindow::Close()
 {
     if (s_hwnd)
     {
+        // 立即隐藏窗口 — 必须在 DestroyWindow 之前调用
+        // 即使 DestroyWindow 因会话断开而延迟/失败，窗口也不会残留在桌面上
+        // 这是防止 RDP 重连后任务栏图标变透明的关键
+        ShowWindow(s_hwnd, SW_HIDE);
+
         // 停止计时器
         KillTimer(s_hwnd, s_timer);
 

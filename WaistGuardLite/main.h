@@ -17,7 +17,8 @@ const wchar_t WINDOW_TITLE[] = L"护腰神器 v1.0";
 #define DEFAULT_DELAY_MINUTES 3    // 默认延迟时长
 
 // 托盘菜单命令
-#define WM_TRAYICON (WM_USER + 1)
+#define WM_TRAYICON       (WM_USER + 1)
+#define WM_RESTORE_TRAY   (WM_USER + 2)  // 延迟恢复托盘图标（避免和 Explorer 竞态）
 #define ID_TRAY_SHOW      1001
 #define ID_TRAY_REST      1002
 #define ID_TRAY_RESTART   1003
@@ -25,6 +26,7 @@ const wchar_t WINDOW_TITLE[] = L"护腰神器 v1.0";
 #define ID_TRAY_ABOUT     1005
 #define ID_TRAY_EXIT      1006
 #define ID_TRAY_PAUSE     1007
+#define IDT_RESTORE_TRAY  2001  // 延迟恢复托盘图标定时器 ID
 
 // 全局状态
 struct AppState {

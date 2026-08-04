@@ -607,21 +607,11 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
 
         case WTS_SESSION_UNLOCK:
         case WTS_REMOTE_CONNECT:
-            // 会话解锁或 RDP 重连：重建托盘图标
+            // 会话解锁或 RDP 重连
             g_appState.isSessionDisconnected = false;
-            Shell_NotifyIcon(NIM_DELETE, &g_appState.nid);
-            Shell_NotifyIcon(NIM_ADD, &g_appState.nid);
-            // 如果是会话断连导致的暂停，自动恢复计时
-            if (g_appState.isTimerPaused && g_appState.isPausedBySession)
-            {
-                ResumeTimer();
-                g_appState.isPausedBySession = false;
-            }
-            // 如果之前没有暂停（比如正在休息中），重新开始计时
-            else if (!g_appState.isTimerPaused)
-            {
-                TimerManager::RestartTimer();
-            }
+            // 延迟 500ms 重建托盘图标，给 Explorer 时间完成桌面和任务栏初始化
+            // 避免 NIM_ADD 和 Explorer 任务栏重建产生竞态导致图标丢失
+            SetTimer(hwnd, IDT_RESTORE_TRAY, 500, RestoreTrayTimerProc);
             break;
         }
         return 0;
@@ -753,4 +743,26 @@ VOID CALLBACK MainWindow::DelayedRestTimerProc(HWND hwnd, UINT uMsg, UINT_PTR id
 {
     KillTimer(hwnd, idEvent);
     ShowRestWindow(false);
+}
+
+VOID CALLBACK MainWindow::RestoreTrayTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
+{
+    // 停止本次一次性定时器
+    KillTimer(hwnd, idEvent);
+
+    // 删除旧图标再重建（确保 Explorer 已稳定）
+    Shell_NotifyIcon(NIM_DELETE, &g_appState.nid);
+    Shell_NotifyIcon(NIM_ADD, &g_appState.nid);
+
+    // 如果是会话断连导致的暂停，自动恢复计时
+    if (g_appState.isTimerPaused && g_appState.isPausedBySession)
+    {
+        ResumeTimer();
+        g_appState.isPausedBySession = false;
+    }
+    // 如果之前没有暂停（比如正在休息中），重新开始计时
+    else if (!g_appState.isTimerPaused)
+    {
+        TimerManager::RestartTimer();
+    }
 }

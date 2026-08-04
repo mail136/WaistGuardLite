@@ -34,6 +34,7 @@ public:
     static void LogError(const wchar_t* message);
     static bool CheckSystemState();
     static VOID CALLBACK DelayedRestTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
+    static VOID CALLBACK RestoreTrayTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
     static void ShowAboutInfo();
 
 private:

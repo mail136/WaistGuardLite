@@ -1,6 +1,8 @@
 ﻿// PreRestWindow.cpp
 #include "PreRestWindow.h"
 #include <strsafe.h>
+#include <wtsapi32.h>
+#pragma comment(lib, "wtsapi32.lib")
 
 HWND PreRestWindow::s_hwnd = NULL;
 int PreRestWindow::s_remainingSeconds = 0;
@@ -128,6 +130,26 @@ LRESULT CALLBACK PreRestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
 {
     switch (uMsg)
     {
+    case WM_CREATE:
+        // 预休息窗口也注册 WTS 会话通知，确保 RDP 断连时能立即关闭
+        // 防止 TOPMOST 窗口在重连时干扰 Explorer 重建任务栏图标缓存
+        WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_ALL_SESSIONS);
+        return 0;
+
+    case WM_WTSSESSION_CHANGE:
+        if (wParam == WTS_REMOTE_DISCONNECT || wParam == WTS_SESSION_LOCK)
+        {
+            // RDP 断连或会话锁定：立即关闭预休息窗口
+            s_isDelayed = false; // 断连时不延迟，直接关闭
+            Close();
+        }
+        return 0;
+
+    case WM_DESTROY:
+        WTSUnRegisterSessionNotification(hwnd);
+        s_hwnd = NULL;
+        return 0;
+
     case WM_PAINT:
     {
         PAINTSTRUCT ps;
@@ -177,9 +199,6 @@ LRESULT CALLBACK PreRestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
         }
         return 0;
 
-    case WM_DESTROY:
-        s_hwnd = NULL;
-        return 0;
     }
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -210,6 +229,9 @@ void PreRestWindow::Close()
 {
     if (s_hwnd)
     {
+        // 立即隐藏窗口 — 防止在销毁期间残留在桌面上
+        ShowWindow(s_hwnd, SW_HIDE);
+
         KillTimer(s_hwnd, s_timer);
         DestroyWindow(s_hwnd);
         s_hwnd = NULL;
