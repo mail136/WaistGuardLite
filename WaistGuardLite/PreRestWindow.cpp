@@ -150,6 +150,12 @@ LRESULT CALLBACK PreRestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
         s_hwnd = NULL;
         return 0;
 
+    case WM_DISPLAYCHANGE:
+        // 显示配置变化（RDP 重连、主机睡眠唤醒等）— 防御性关闭
+        s_isDelayed = false;
+        Close();
+        return 0;
+
     case WM_PAINT:
     {
         PAINTSTRUCT ps;

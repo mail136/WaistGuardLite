@@ -12,6 +12,21 @@ AppState g_appState = { 0 };
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
+    // 单实例检查：使用命名互斥体防止重复运行
+    HANDLE hMutex = CreateMutex(NULL, FALSE, L"WaistGuardLite_SingleInstance_Mutex");
+    if (hMutex && GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        // 已有实例在运行，尝试激活其主窗口后退出
+        HWND hExisting = FindWindow(CLASS_NAME, WINDOW_TITLE);
+        if (hExisting)
+        {
+            SetForegroundWindow(hExisting);
+            ShowWindow(hExisting, SW_RESTORE);
+        }
+        if (hMutex) CloseHandle(hMutex);
+        return 0;
+    }
+
     // 初始化默认值
     g_appState.workDuration = DEFAULT_WORK_MINUTES;
     g_appState.breakDuration = DEFAULT_BREAK_MINUTES;

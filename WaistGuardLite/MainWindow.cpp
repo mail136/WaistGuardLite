@@ -618,8 +618,28 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
     }
 
     case WM_DISPLAYCHANGE:
-        // 显示设置改变（分辨率、颜色深度等）
+        // 显示设置改变（分辨率、颜色深度等）— 常见于 RDP 主机睡眠唤醒后的重连
+        // 此时 WTS_REMOTE_DISCONNECT 不会触发，但全屏置顶窗口会干扰任务栏图标重建
+        // 因此必须立即关闭所有休息窗口
         CheckSystemState();
+        if (RestWindow::IsActive())
+        {
+            RestWindow::Close();
+            g_appState.isResting = false;
+        }
+        if (PreRestWindow::IsActive())
+        {
+            PreRestWindow::Close();
+            g_appState.isPreResting = false;
+        }
+        // 如果正在计时中，暂停计时（类似会话断连的处理）
+        if (!g_appState.isTimerPaused && !g_appState.isResting && !g_appState.isPreResting)
+        {
+            PauseTimer();
+            g_appState.isPausedBySession = true;
+        }
+        // 延迟重建托盘图标，避免和 Explorer 桌面重建竞态
+        SetTimer(hwnd, IDT_RESTORE_TRAY, 500, RestoreTrayTimerProc);
         return 0;
     }
 

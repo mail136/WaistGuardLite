@@ -122,6 +122,14 @@ LRESULT CALLBACK RestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
             WTSUnRegisterSessionNotification(hwnd);
             return 0;
 
+        case WM_DISPLAYCHANGE:
+            // 显示配置变化（RDP 重连、主机睡眠唤醒等场景）
+            // 此时全屏置顶窗口可能干扰 Explorer 重建任务栏，立即关闭
+            Close();
+            // 关闭后重新开始计时
+            TimerManager::RestartTimer();
+            return 0;
+
         case WM_PAINT:
         {
             PAINTSTRUCT ps;
