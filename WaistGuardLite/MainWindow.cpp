@@ -573,7 +573,23 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
 
             case PBT_APMRESUMEAUTOMATIC:
                 // 从睡眠状态恢复
-                RestartTimer();
+                // 如果计时是由 RDP 断连触发的暂停，由 RestoreTrayTimerProc 统一恢复
+                if (g_appState.isPausedBySession)
+                {
+                    // RDP 断连导致的暂停，不做任何事，等 RestoreTrayTimerProc 处理
+                }
+                else if (g_appState.isTimerPaused)
+                {
+                    // 手动暂停的计时器保持暂停状态，不自动恢复
+                }
+                else
+                {
+                    // 计时器在睡眠前正在运行，先暂存累计时间再恢复，
+                    // 避免 startTick 被重置导致计时清零
+                    PauseTimer();
+                    g_appState.isPausedBySession = false; // 不是会话暂停，清除标记
+                    ResumeTimer();
+                }
                 return TRUE;
         }
         break;
@@ -618,28 +634,31 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
     }
 
     case WM_DISPLAYCHANGE:
-        // 显示设置改变（分辨率、颜色深度等）— 常见于 RDP 主机睡眠唤醒后的重连
-        // 此时 WTS_REMOTE_DISCONNECT 不会触发，但全屏置顶窗口会干扰任务栏图标重建
-        // 因此必须立即关闭所有休息窗口
+        // 显示设置改变（分辨率、颜色深度等）— 常见于 RDP 断连/主机睡眠/显示器唤醒
+        // 防御性关闭全屏窗口，以防干扰 Explorer 重建任务栏
         CheckSystemState();
-        if (RestWindow::IsActive())
         {
-            RestWindow::Close();
-            g_appState.isResting = false;
+            bool hadRestWindow = false;
+            if (RestWindow::IsActive())
+            {
+                RestWindow::Close();
+                g_appState.isResting = false;
+                hadRestWindow = true;
+            }
+            if (PreRestWindow::IsActive())
+            {
+                PreRestWindow::Close();
+                g_appState.isPreResting = false;
+                hadRestWindow = true;
+            }
+            // 仅当休息窗口确实在显示时才暂停计时（说明发生了真正的断连/异常）
+            // 普通显示变化（如显示器唤醒）不动计时，避免正常使用时计时停止刷新
+            if (hadRestWindow && !g_appState.isTimerPaused)
+            {
+                PauseTimer();
+                g_appState.isPausedBySession = true;
+            }
         }
-        if (PreRestWindow::IsActive())
-        {
-            PreRestWindow::Close();
-            g_appState.isPreResting = false;
-        }
-        // 如果正在计时中，暂停计时（类似会话断连的处理）
-        if (!g_appState.isTimerPaused && !g_appState.isResting && !g_appState.isPreResting)
-        {
-            PauseTimer();
-            g_appState.isPausedBySession = true;
-        }
-        // 延迟重建托盘图标，避免和 Explorer 桌面重建竞态
-        SetTimer(hwnd, IDT_RESTORE_TRAY, 500, RestoreTrayTimerProc);
         return 0;
     }
 
@@ -774,15 +793,15 @@ VOID CALLBACK MainWindow::RestoreTrayTimerProc(HWND hwnd, UINT uMsg, UINT_PTR id
     Shell_NotifyIcon(NIM_DELETE, &g_appState.nid);
     Shell_NotifyIcon(NIM_ADD, &g_appState.nid);
 
-    // 如果是会话断连导致的暂停，自动恢复计时
-    if (g_appState.isTimerPaused && g_appState.isPausedBySession)
+    // 仅当会话已恢复连接时才恢复计时，防止断连期间误恢复
+    if (!g_appState.isSessionDisconnected)
     {
-        ResumeTimer();
-        g_appState.isPausedBySession = false;
-    }
-    // 如果之前没有暂停（比如正在休息中），重新开始计时
-    else if (!g_appState.isTimerPaused)
-    {
-        TimerManager::RestartTimer();
+        // 只有会话断连导致的暂停才自动恢复（从暂停位置继续，不重置）
+        // 其他情况（如手动暂停、从未暂停等）不动计时器
+        if (g_appState.isTimerPaused && g_appState.isPausedBySession)
+        {
+            ResumeTimer();
+            g_appState.isPausedBySession = false;
+        }
     }
 }

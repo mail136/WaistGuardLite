@@ -123,11 +123,9 @@ LRESULT CALLBACK RestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
             return 0;
 
         case WM_DISPLAYCHANGE:
-            // 显示配置变化（RDP 重连、主机睡眠唤醒等场景）
-            // 此时全屏置顶窗口可能干扰 Explorer 重建任务栏，立即关闭
+            // 显示配置变化（RDP 断连、主机睡眠等）— 防御性关闭
+            // 计时暂停/恢复由 MainWindow 统一处理，此处只关窗
             Close();
-            // 关闭后重新开始计时
-            TimerManager::RestartTimer();
             return 0;
 
         case WM_PAINT:
