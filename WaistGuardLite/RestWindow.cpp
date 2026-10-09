@@ -36,6 +36,17 @@ bool RestWindow::Create(int duration)
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
+    //用工作區高度，不覆蓋任務欄，因遠程時win11會造成任務欄圖標丟失
+    RECT workArea;
+    if (SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0)) {
+        int workWidth  = workArea.right - workArea.left;
+        int workHeight = workArea.bottom - workArea.top;
+
+        //std::cout << "工作區寬度: " << workWidth << std::endl;
+        //std::cout << "工作區高度: " << workHeight << std::endl;
+        screenHeight = workHeight;
+    }
+
     // 创建屏窗口
     s_hwnd = CreateWindowEx(
         WS_EX_TOPMOST,           // 总在最前
