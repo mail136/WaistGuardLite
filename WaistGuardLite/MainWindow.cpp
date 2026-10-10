@@ -244,7 +244,10 @@ VOID CALLBACK MainWindow::WorkTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, 
 {
     // RDP 断连时不弹出全屏休息窗口，避免重连时干扰任务栏图标缓存
     if (g_appState.isSessionDisconnected)
+    {
+		RestartTimer();
         return;
+    }
 
     // 暂停状态不弹出
     if (g_appState.isTimerPaused)
@@ -398,268 +401,268 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
 
     switch (uMsg)
     {
-    case WM_CREATE:
-    {
-        // 注册 TaskbarCreated 消息（Explorer 重启后重建托盘图标）
-        g_appState.taskbarRestartMsg = RegisterWindowMessage(L"TaskbarCreated");
-
-        // 创建托盘图标
-        ZeroMemory(&g_appState.nid, sizeof(NOTIFYICONDATA));
-        g_appState.nid.cbSize = sizeof(NOTIFYICONDATA);
-        g_appState.nid.hWnd = hwnd;
-        g_appState.nid.uID = 1;
-        g_appState.nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-        g_appState.nid.uCallbackMessage = WM_TRAYICON;
-        g_appState.nid.hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_WAISTGUARDLITE));
-        StringCchCopy(g_appState.nid.szTip, ARRAYSIZE(g_appState.nid.szTip), WINDOW_TITLE);
-        Shell_NotifyIcon(NIM_ADD, &g_appState.nid);
-
-        // 初始化定时器
-        g_appState.startTick = GetTickCount64();
-        g_appState.workTimer = SetTimer(hwnd, 1, g_appState.workDuration * 60 * 1000, WorkTimerProc);
-        g_appState.displayTimer = SetTimer(hwnd, 2, 100, DisplayTimerProc);  // 使用100ms更新频率
-
-        // 初始化通用控件
-        INITCOMMONCONTROLSEX icex;
-        icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
-        icex.dwICC = ICC_BAR_CLASSES;
-        InitCommonControlsEx(&icex);
-
-        // 创建状态栏
-        hStatus = CreateWindowEx(
-            0,
-            STATUSCLASSNAME,
-            NULL,
-            WS_CHILD | WS_VISIBLE,
-            0, 0, 0, 0,
-            hwnd,
-            (HMENU)IDC_STATUSBAR,
-            GetModuleHandle(NULL),
-            NULL);
-
-        if (hStatus)
+        case WM_CREATE:
         {
-            // 设置状态栏文本
-            const wchar_t* tipText = L"双击托盘图标显示主窗口 | 右键托盘图标可设置、立即休息等";
-            SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM)tipText);
-        }
+            // 注册 TaskbarCreated 消息（Explorer 重启后重建托盘图标）
+            g_appState.taskbarRestartMsg = RegisterWindowMessage(L"TaskbarCreated");
 
-        // 注册 WTS 会话通知（监听 RDP 断连/重连）
-        WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_ALL_SESSIONS);
+            // 创建托盘图标
+            ZeroMemory(&g_appState.nid, sizeof(NOTIFYICONDATA));
+            g_appState.nid.cbSize = sizeof(NOTIFYICONDATA);
+            g_appState.nid.hWnd = hwnd;
+            g_appState.nid.uID = 1;
+            g_appState.nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+            g_appState.nid.uCallbackMessage = WM_TRAYICON;
+            g_appState.nid.hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_WAISTGUARDLITE));
+            StringCchCopy(g_appState.nid.szTip, ARRAYSIZE(g_appState.nid.szTip), WINDOW_TITLE);
+            Shell_NotifyIcon(NIM_ADD, &g_appState.nid);
 
-        return 0;
-    }
+            // 初始化定时器
+            g_appState.startTick = GetTickCount64();
+            g_appState.workTimer = SetTimer(hwnd, 1, g_appState.workDuration * 60 * 1000, WorkTimerProc);
+            g_appState.displayTimer = SetTimer(hwnd, 2, 100, DisplayTimerProc);  // 使用100ms更新频率
 
-    case WM_COMMAND:
-        // 处理菜单命令
-        HandleTrayCommand(hwnd, wParam);
-        return 0;
+            // 初始化通用控件
+            INITCOMMONCONTROLSEX icex;
+            icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+            icex.dwICC = ICC_BAR_CLASSES;
+            InitCommonControlsEx(&icex);
 
-    case WM_TRAYICON:
-        switch (lParam)
-        {
-        case WM_RBUTTONUP:
-        case WM_CONTEXTMENU:
-            GetCursorPos(&pt);
-            ShowTrayMenu(hwnd, pt);
-            return 0;
+            // 创建状态栏
+            hStatus = CreateWindowEx(
+                0,
+                STATUSCLASSNAME,
+                NULL,
+                WS_CHILD | WS_VISIBLE,
+                0, 0, 0, 0,
+                hwnd,
+                (HMENU)IDC_STATUSBAR,
+                GetModuleHandle(NULL),
+                NULL);
 
-        case WM_LBUTTONDBLCLK:
-            ShowWindow(hwnd, IsWindowVisible(hwnd) ? SW_HIDE : SW_RESTORE);
-            if (IsWindowVisible(hwnd))
+            if (hStatus)
             {
-                SetForegroundWindow(hwnd);
-                InvalidateRect(hwnd, NULL, TRUE);
+                // 设置状态栏文本
+                const wchar_t* tipText = L"双击托盘图标显示主窗口 | 右键托盘图标可设置、立即休息等";
+                SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM)tipText);
             }
-            return 0;
-        }
-        break;
 
-    case WM_SIZE:
-        if (wParam == SIZE_MINIMIZED)
-        {
-            ShowWindow(hwnd, SW_HIDE);
+            // 注册 WTS 会话通知（监听 RDP 断连/重连）
+            WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_ALL_SESSIONS);
+
             return 0;
         }
 
-        GetClientRect(hwnd, &rect);
-        hStatus = GetDlgItem(hwnd, IDC_STATUSBAR);
-        if (hStatus)
-        {
-            SetWindowPos(hStatus, HWND_BOTTOM, 0, rect.bottom - 25, rect.right, 25, SWP_NOACTIVATE);
-        }
-        InvalidateRect(hwnd, NULL, TRUE);
-        return 0;
+        case WM_COMMAND:
+            // 处理菜单命令
+            HandleTrayCommand(hwnd, wParam);
+            return 0;
 
-    case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hwnd, &ps);
-
-        // 设置文本颜色和背景模式
-        SetTextColor(hdc, RGB(51, 51, 51));
-        SetBkMode(hdc, TRANSPARENT);
-
-        // 计算当前工作时长
-        ULONGLONG currentTime = GetTickCount64();
-        ULONGLONG elapsedTime = (currentTime - g_appState.startTick) / 1000;
-        int minutes = elapsedTime / 60;
-        int seconds = elapsedTime % 60;
-
-        // 创建字体
-        HFONT hFont = CreateFont(32, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-            DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
-            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
-
-        HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
-
-        // 获取窗口客户区大小并调整绘制区域
-        RECT rect;
-        GetClientRect(hwnd, &rect);
-        rect.bottom -= 25;  // 为状态栏留出空间
-        rect.top += 10;     // 上方留出一些空间
-
-        // 绘制工作时长
-        wchar_t timeText[64];
-        swprintf_s(timeText, L"已工作时长：%02d:%02d", minutes, seconds);
-        DrawText(hdc, timeText, -1, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-
-        // 清理
-        SelectObject(hdc, hOldFont);
-        DeleteObject(hFont);
-
-        EndPaint(hwnd, &ps);
-        return 0;
-    }
-
-    case WM_GETMINMAXINFO:
-    {
-        // 设置窗口最小尺寸
-        MINMAXINFO* mmi = (MINMAXINFO*)lParam;
-        mmi->ptMinTrackSize.x = 400;  // 最小宽度从500改为400
-        mmi->ptMinTrackSize.y = 225;  // 最小高度保持不变
-        return 0;
-    }
-
-    case WM_DESTROY:
-        // 取消注册 WTS 会话通知
-        WTSUnRegisterSessionNotification(hwnd);
-        Shell_NotifyIcon(NIM_DELETE, &g_appState.nid);
-        PostQuitMessage(0);
-        return 0;
-
-    case WM_CLOSE:
-        ShowWindow(hwnd, SW_HIDE);  // 点击闭按钮时隐藏窗口而不是退出
-        return 0;
-
-    case WM_ERASEBKGND:
-    {
-        HDC hdc = (HDC)wParam;
-        RECT rect;
-        GetClientRect(hwnd, &rect);
-        HBRUSH hBrush = CreateSolidBrush(APP_BG_COLOR);
-        FillRect(hdc, &rect, hBrush);
-        DeleteObject(hBrush);
-        return TRUE;
-    }
-
-    case WM_POWERBROADCAST:
-        switch (wParam)
-        {
-            case PBT_APMPOWERSTATUSCHANGE:
-                // 电源状态改变
-                CheckSystemState();
-                return TRUE;
-
-            case PBT_APMRESUMEAUTOMATIC:
-                // 从睡眠状态恢复
-                // 如果计时是由 RDP 断连触发的暂停，由 RestoreTrayTimerProc 统一恢复
-                if (g_appState.isPausedBySession)
-                {
-                    // RDP 断连导致的暂停，不做任何事，等 RestoreTrayTimerProc 处理
-                }
-                else if (g_appState.isTimerPaused)
-                {
-                    // 手动暂停的计时器保持暂停状态，不自动恢复
-                }
-                else
-                {
-                    // 计时器在睡眠前正在运行，先暂存累计时间再恢复，
-                    // 避免 startTick 被重置导致计时清零
-                    PauseTimer();
-                    g_appState.isPausedBySession = false; // 不是会话暂停，清除标记
-                    ResumeTimer();
-                }
-                return TRUE;
-        }
-        break;
-
-    case WM_WTSSESSION_CHANGE:
-    {
-        switch (wParam)
-        {
-        case WTS_SESSION_LOCK:
-        case WTS_REMOTE_DISCONNECT:
-            // 会话锁定或 RDP 断连：记录状态为断连
-            g_appState.isSessionDisconnected = true;
-            // 关闭全屏休息/预休息窗口，防止重连时干扰任务栏图标缓存
-            if (RestWindow::IsActive())
+        case WM_TRAYICON:
+            switch (lParam)
             {
-                RestWindow::Close();
-            }
-            if (PreRestWindow::IsActive())
-            {
-                PreRestWindow::Close();
-            }
-            g_appState.isResting = false;
-            g_appState.isPreResting = false;
-            // 如果当前在计时中（未暂停、未休息），暂停计时
-            if (!g_appState.isTimerPaused && !g_appState.isResting && !g_appState.isPreResting)
-            {
-                PauseTimer();
-                g_appState.isPausedBySession = true;
+            case WM_RBUTTONUP:
+            case WM_CONTEXTMENU:
+                GetCursorPos(&pt);
+                ShowTrayMenu(hwnd, pt);
+                return 0;
+
+            case WM_LBUTTONDBLCLK:
+                ShowWindow(hwnd, IsWindowVisible(hwnd) ? SW_HIDE : SW_RESTORE);
+                if (IsWindowVisible(hwnd))
+                {
+                    SetForegroundWindow(hwnd);
+                    InvalidateRect(hwnd, NULL, TRUE);
+                }
+                return 0;
             }
             break;
 
-        case WTS_SESSION_UNLOCK:
-        case WTS_REMOTE_CONNECT:
-            // 会话解锁或 RDP 重连
-            g_appState.isSessionDisconnected = false;
-            // 延迟 500ms 重建托盘图标，给 Explorer 时间完成桌面和任务栏初始化
-            // 避免 NIM_ADD 和 Explorer 任务栏重建产生竞态导致图标丢失
-            SetTimer(hwnd, IDT_RESTORE_TRAY, 500, RestoreTrayTimerProc);
-            break;
-        }
-        return 0;
-    }
-
-    case WM_DISPLAYCHANGE:
-        // 显示设置改变（分辨率、颜色深度等）— 常见于 RDP 断连/主机睡眠/显示器唤醒
-        // 防御性关闭全屏窗口，以防干扰 Explorer 重建任务栏
-        CheckSystemState();
-        {
-            bool hadRestWindow = false;
-            if (RestWindow::IsActive())
+        case WM_SIZE:
+            if (wParam == SIZE_MINIMIZED)
             {
-                RestWindow::Close();
+                ShowWindow(hwnd, SW_HIDE);
+                return 0;
+            }
+
+            GetClientRect(hwnd, &rect);
+            hStatus = GetDlgItem(hwnd, IDC_STATUSBAR);
+            if (hStatus)
+            {
+                SetWindowPos(hStatus, HWND_BOTTOM, 0, rect.bottom - 25, rect.right, 25, SWP_NOACTIVATE);
+            }
+            InvalidateRect(hwnd, NULL, TRUE);
+            return 0;
+
+        case WM_PAINT:
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+
+            // 设置文本颜色和背景模式
+            SetTextColor(hdc, RGB(51, 51, 51));
+            SetBkMode(hdc, TRANSPARENT);
+
+            // 计算当前工作时长
+            ULONGLONG currentTime = GetTickCount64();
+            ULONGLONG elapsedTime = (currentTime - g_appState.startTick) / 1000;
+            int minutes = elapsedTime / 60;
+            int seconds = elapsedTime % 60;
+
+            // 创建字体
+            HFONT hFont = CreateFont(32, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
+                CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei");
+
+            HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+
+            // 获取窗口客户区大小并调整绘制区域
+            RECT rect;
+            GetClientRect(hwnd, &rect);
+            rect.bottom -= 25;  // 为状态栏留出空间
+            rect.top += 10;     // 上方留出一些空间
+
+            // 绘制工作时长
+            wchar_t timeText[64];
+            swprintf_s(timeText, L"已工作时长：%02d:%02d", minutes, seconds);
+            DrawText(hdc, timeText, -1, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+            // 清理
+            SelectObject(hdc, hOldFont);
+            DeleteObject(hFont);
+
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
+
+        case WM_GETMINMAXINFO:
+        {
+            // 设置窗口最小尺寸
+            MINMAXINFO* mmi = (MINMAXINFO*)lParam;
+            mmi->ptMinTrackSize.x = 400;  // 最小宽度从500改为400
+            mmi->ptMinTrackSize.y = 225;  // 最小高度保持不变
+            return 0;
+        }
+
+        case WM_DESTROY:
+            // 取消注册 WTS 会话通知
+            WTSUnRegisterSessionNotification(hwnd);
+            Shell_NotifyIcon(NIM_DELETE, &g_appState.nid);
+            PostQuitMessage(0);
+            return 0;
+
+        case WM_CLOSE:
+            ShowWindow(hwnd, SW_HIDE);  // 点击闭按钮时隐藏窗口而不是退出
+            return 0;
+
+        case WM_ERASEBKGND:
+        {
+            HDC hdc = (HDC)wParam;
+            RECT rect;
+            GetClientRect(hwnd, &rect);
+            HBRUSH hBrush = CreateSolidBrush(APP_BG_COLOR);
+            FillRect(hdc, &rect, hBrush);
+            DeleteObject(hBrush);
+            return TRUE;
+        }
+
+        case WM_POWERBROADCAST:
+            switch (wParam)
+            {
+                case PBT_APMPOWERSTATUSCHANGE:
+                    // 电源状态改变
+                    CheckSystemState();
+                    return TRUE;
+
+                case PBT_APMRESUMEAUTOMATIC:
+                    // 从睡眠状态恢复
+                    // 如果计时是由 RDP 断连触发的暂停，由 RestoreTrayTimerProc 统一恢复
+                    if (g_appState.isPausedBySession)
+                    {
+                        // RDP 断连导致的暂停，不做任何事，等 RestoreTrayTimerProc 处理
+                    }
+                    else if (g_appState.isTimerPaused)
+                    {
+                        // 手动暂停的计时器保持暂停状态，不自动恢复
+                    }
+                    else
+                    {
+                        // 计时器在睡眠前正在运行，先暂存累计时间再恢复，
+                        // 避免 startTick 被重置导致计时清零
+                        PauseTimer();
+                        g_appState.isPausedBySession = false; // 不是会话暂停，清除标记
+                        ResumeTimer();
+                    }
+                    return TRUE;
+            }
+            break;
+
+        case WM_WTSSESSION_CHANGE:
+        {
+            switch (wParam)
+            {
+            case WTS_SESSION_LOCK:
+            case WTS_REMOTE_DISCONNECT:
+                // 会话锁定或 RDP 断连：记录状态为断连
+                g_appState.isSessionDisconnected = true;
+                // 关闭全屏休息/预休息窗口，防止重连时干扰任务栏图标缓存
+                if (RestWindow::IsActive())
+                {
+                    RestWindow::Close();
+                }
+                if (PreRestWindow::IsActive())
+                {
+                    PreRestWindow::Close();
+                }
                 g_appState.isResting = false;
-                hadRestWindow = true;
-            }
-            if (PreRestWindow::IsActive())
-            {
-                PreRestWindow::Close();
                 g_appState.isPreResting = false;
-                hadRestWindow = true;
+                // 如果当前在计时中（未暂停、未休息），暂停计时
+                if (!g_appState.isTimerPaused && !g_appState.isResting && !g_appState.isPreResting)
+                {
+                    ////PauseTimer();
+                    g_appState.isPausedBySession = true;
+                }
+                break;
+
+            case WTS_SESSION_UNLOCK:
+            case WTS_REMOTE_CONNECT:
+                // 会话解锁或 RDP 重连
+                g_appState.isSessionDisconnected = false;
+                // 延迟 500ms 重建托盘图标，给 Explorer 时间完成桌面和任务栏初始化
+                // 避免 NIM_ADD 和 Explorer 任务栏重建产生竞态导致图标丢失
+                SetTimer(hwnd, IDT_RESTORE_TRAY, 500, RestoreTrayTimerProc);
+                break;
             }
-            // 仅当休息窗口确实在显示时才暂停计时（说明发生了真正的断连/异常）
-            // 普通显示变化（如显示器唤醒）不动计时，避免正常使用时计时停止刷新
-            if (hadRestWindow && !g_appState.isTimerPaused)
-            {
-                PauseTimer();
-                g_appState.isPausedBySession = true;
-            }
+            return 0;
         }
-        return 0;
+
+        case WM_DISPLAYCHANGE:
+            // 显示设置改变（分辨率、颜色深度等）— 常见于 RDP 断连/主机睡眠/显示器唤醒
+            // 防御性关闭全屏窗口，以防干扰 Explorer 重建任务栏
+            CheckSystemState();
+            {
+                bool hadRestWindow = false;
+                if (RestWindow::IsActive())
+                {
+                    RestWindow::Close();
+                    g_appState.isResting = false;
+                    hadRestWindow = true;
+                }
+                if (PreRestWindow::IsActive())
+                {
+                    PreRestWindow::Close();
+                    g_appState.isPreResting = false;
+                    hadRestWindow = true;
+                }
+                // 仅当休息窗口确实在显示时才暂停计时（说明发生了真正的断连/异常）
+                // 普通显示变化（如显示器唤醒）不动计时，避免正常使用时计时停止刷新
+                if (hadRestWindow && !g_appState.isTimerPaused)
+                {
+                    PauseTimer();
+                    g_appState.isPausedBySession = true;
+                }
+            }
+            return 0;
     }
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
