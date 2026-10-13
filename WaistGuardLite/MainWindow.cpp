@@ -565,7 +565,7 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
             DeleteObject(hBrush);
             return TRUE;
         }
-
+		/*改為不覆蓋任務欄后圖標丟失問題解決，不能處理這些事件，不穩定，有時恢復不了，會導致計時器不動
         case WM_POWERBROADCAST:
             switch (wParam)
             {
@@ -663,6 +663,7 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
                 }
             }
             return 0;
+        */
     }
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
