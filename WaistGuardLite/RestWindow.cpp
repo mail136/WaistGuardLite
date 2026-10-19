@@ -115,7 +115,7 @@ LRESULT CALLBACK RestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
 {
     switch (uMsg)
     {
-        case WM_CREATE:
+        /*case WM_CREATE:
             // 全屏休息窗口自身也注册 WTS 会话通知，确保 RDP 断连时能立即关闭
             // 防止全屏置顶窗口在重连时干扰 Explorer 重建任务栏图标缓存
             WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_ALL_SESSIONS);
@@ -126,6 +126,7 @@ LRESULT CALLBACK RestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
             {
                 // RDP 断连或会话锁定：立即关闭全屏窗口，防止干扰重连时的桌面初始化
                 Close();
+                TimerManager::RestartTimer();
             }
             return 0;
 
@@ -137,8 +138,9 @@ LRESULT CALLBACK RestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
             // 显示配置变化（RDP 断连、主机睡眠等）— 防御性关闭
             // 计时暂停/恢复由 MainWindow 统一处理，此处只关窗
             Close();
+            TimerManager::RestartTimer();
             return 0;
-
+        */
         case WM_PAINT:
         {
             PAINTSTRUCT ps;

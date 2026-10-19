@@ -243,11 +243,11 @@ VOID CALLBACK MainWindow::DisplayTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEven
 VOID CALLBACK MainWindow::WorkTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
 {
     // RDP 断连时不弹出全屏休息窗口，避免重连时干扰任务栏图标缓存
-    if (g_appState.isSessionDisconnected)
+    /*if (g_appState.isSessionDisconnected)
     {
 		RestartTimer();
         return;
-    }
+    }*/
 
     // 暂停状态不弹出
     if (g_appState.isTimerPaused)
@@ -448,7 +448,7 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
             }
 
             // 注册 WTS 会话通知（监听 RDP 断连/重连）
-            WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_ALL_SESSIONS);
+            //WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_ALL_SESSIONS);
 
             return 0;
         }
@@ -546,7 +546,7 @@ LRESULT CALLBACK MainWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
 
         case WM_DESTROY:
             // 取消注册 WTS 会话通知
-            WTSUnRegisterSessionNotification(hwnd);
+            //WTSUnRegisterSessionNotification(hwnd);
             Shell_NotifyIcon(NIM_DELETE, &g_appState.nid);
             PostQuitMessage(0);
             return 0;
@@ -726,7 +726,7 @@ void MainWindow::HandleTrayCommand(HWND hwnd, WPARAM wParam)
 void MainWindow::RestartTimer()
 {
     g_appState.isTimerPaused = false;
-    g_appState.isPausedBySession = false;
+    //g_appState.isPausedBySession = false;
     TimerManager::RestartTimer();
 }
 
@@ -754,7 +754,7 @@ void MainWindow::ResumeTimer()
     // 从保存的累计时间恢复，重新计算 startTick
     g_appState.startTick = GetTickCount64() - g_appState.pausedElapsed;
     g_appState.isTimerPaused = false;
-    g_appState.isPausedBySession = false;
+    //g_appState.isPausedBySession = false;
 
     // 重新启动定时器
     TimerManager::StartTimer();
@@ -798,14 +798,14 @@ VOID CALLBACK MainWindow::RestoreTrayTimerProc(HWND hwnd, UINT uMsg, UINT_PTR id
     Shell_NotifyIcon(NIM_ADD, &g_appState.nid);
 
     // 仅当会话已恢复连接时才恢复计时，防止断连期间误恢复
-    if (!g_appState.isSessionDisconnected)
-    {
-        // 只有会话断连导致的暂停才自动恢复（从暂停位置继续，不重置）
-        // 其他情况（如手动暂停、从未暂停等）不动计时器
-        if (g_appState.isTimerPaused && g_appState.isPausedBySession)
-        {
-            ResumeTimer();
-            g_appState.isPausedBySession = false;
-        }
-    }
+    //if (!g_appState.isSessionDisconnected)
+    //{
+    //    // 只有会话断连导致的暂停才自动恢复（从暂停位置继续，不重置）
+    //    // 其他情况（如手动暂停、从未暂停等）不动计时器
+    //    if (g_appState.isTimerPaused && g_appState.isPausedBySession)
+    //    {
+    //        ResumeTimer();
+    //        g_appState.isPausedBySession = false;
+    //    }
+    //}
 }

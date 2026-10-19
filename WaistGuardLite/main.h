@@ -42,9 +42,9 @@ struct AppState {
     bool autoStart;         // 开机自启动
     NOTIFYICONDATA nid;     // 托盘图标数据
     UINT taskbarRestartMsg; // TaskbarCreated 注册消息 ID
-    bool isSessionDisconnected; // RDP 会话是否已断连
+    //bool isSessionDisconnected; // RDP 会话是否已断连
     bool isTimerPaused;         // 计时是否已暂停
-    bool isPausedBySession;     // 是否由会话断连触发的暂停
+    //bool isPausedBySession;     // 是否由会话断连触发的暂停
     ULONGLONG pausedElapsed;    // 暂停时累计的工作时间（毫秒）
 };
 

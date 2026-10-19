@@ -130,7 +130,7 @@ LRESULT CALLBACK PreRestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
 {
     switch (uMsg)
     {
-    case WM_CREATE:
+    /*case WM_CREATE:
         // 预休息窗口也注册 WTS 会话通知，确保 RDP 断连时能立即关闭
         // 防止 TOPMOST 窗口在重连时干扰 Explorer 重建任务栏图标缓存
         WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_ALL_SESSIONS);
@@ -155,7 +155,7 @@ LRESULT CALLBACK PreRestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
         s_isDelayed = false;
         Close();
         return 0;
-
+    */
     case WM_PAINT:
     {
         PAINTSTRUCT ps;
@@ -193,6 +193,11 @@ LRESULT CALLBACK PreRestWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
         return 0;
     }
 
+    case WM_KEYDOWN:
+    case WM_KEYUP:
+    case WM_SYSKEYDOWN:
+    case WM_SYSKEYUP:
+        return 0;  // 忽略所有键盘输入,防止alt+f4關閉
     case WM_COMMAND:
         if (LOWORD(wParam) == 1001)  // 延迟按钮
         {
